@@ -1,0 +1,5 @@
+# Same sampling during eagle3 K=4 (replicate run, len=128, conc 1 -> 16, 09:54 UTC).
+EngineCore %CPU 70.0 | GPU 100 %
+EngineCore %CPU 80.0 | GPU 100 %
+EngineCore %CPU 50.0 | GPU 100 %
+EngineCore %CPU 90.0 | GPU 100 %

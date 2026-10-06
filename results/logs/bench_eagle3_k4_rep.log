@@ -1,0 +1,3 @@
+WARMUP_DONE 10-06 09:53:49
+[eagle3_k4_rep] len=128 conc=1 n=24 err=0 ttft_p50=34.7ms tpot_p50=3.65ms tok/s=255.6 acc=0.282 mal=2.13 kv_max=0.002 short=0
+[eagle3_k4_rep] len=128 conc=16 n=72 err=0 ttft_p50=61.9ms tpot_p50=8.77ms tok/s=1597.1 acc=0.285 mal=2.14 kv_max=0.020 short=0

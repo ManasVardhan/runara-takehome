@@ -1,0 +1,8 @@
+# EngineCore process %CPU (top, 1 core = 100%) and nvidia-smi GPU utilization,
+# sampled every 3 s while draft_model K=8 served len=32/128 cells (run 2, 09:35 UTC).
+EngineCore %CPU 90.9  | GPU 55 %
+EngineCore %CPU 100.0 | GPU 45 %
+EngineCore %CPU 90.0  | GPU 45 %
+EngineCore %CPU 110.0 | GPU 44 %
+EngineCore %CPU 100.0 | GPU 47 %
+EngineCore %CPU 100.0 | GPU 49 %

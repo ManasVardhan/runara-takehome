@@ -1,0 +1,3 @@
+WARMUP_DONE 10-06 09:46:49
+[baseline_t0.7] len=128 conc=1 n=24 err=0 ttft_p50=27.7ms tpot_p50=4.34ms tok/s=220.3 acc=- mal=- kv_max=0.001 short=0
+[baseline_t0.7] len=128 conc=16 n=72 err=0 ttft_p50=134.8ms tpot_p50=12.44ms tok/s=1124.9 acc=- mal=- kv_max=0.017 short=0

@@ -1,0 +1,10 @@
+WARMUP_DONE 10-06 09:35:33
+[draft_model_k8] len=32 conc=1 n=24 err=0 ttft_p50=118.5ms tpot_p50=8.19ms tok/s=85.1 acc=0.687 mal=6.50 kv_max=0.002 short=0
+[draft_model_k8] len=32 conc=4 n=24 err=0 ttft_p50=164.9ms tpot_p50=8.60ms tok/s=286.7 acc=0.705 mal=6.64 kv_max=0.005 short=0
+[draft_model_k8] len=32 conc=16 n=72 err=0 ttft_p50=196.7ms tpot_p50=9.41ms tok/s=889.2 acc=0.677 mal=6.41 kv_max=0.017 short=0
+[draft_model_k8] len=128 conc=1 n=24 err=0 ttft_p50=118.3ms tpot_p50=13.99ms tok/s=69.5 acc=0.348 mal=3.79 kv_max=0.005 short=0
+[draft_model_k8] len=128 conc=4 n=24 err=0 ttft_p50=159.9ms tpot_p50=14.28ms tok/s=242.7 acc=0.342 mal=3.73 kv_max=0.012 short=0
+[draft_model_k8] len=128 conc=16 n=72 err=0 ttft_p50=166.9ms tpot_p50=14.96ms tok/s=892.4 acc=0.344 mal=3.75 kv_max=0.045 short=0
+[draft_model_k8] len=512 conc=1 n=24 err=0 ttft_p50=119.6ms tpot_p50=15.73ms tok/s=67.2 acc=0.310 mal=3.48 kv_max=0.011 short=0
+[draft_model_k8] len=512 conc=4 n=24 err=0 ttft_p50=157.4ms tpot_p50=14.92ms tok/s=252.7 acc=0.316 mal=3.53 kv_max=0.034 short=0
+[draft_model_k8] len=512 conc=16 n=72 err=0 ttft_p50=163.7ms tpot_p50=16.07ms tok/s=950.7 acc=0.316 mal=3.53 kv_max=0.129 short=0

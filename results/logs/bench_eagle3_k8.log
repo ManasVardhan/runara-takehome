@@ -1,0 +1,10 @@
+WARMUP_DONE 10-06 09:17:50
+[eagle3_k8] len=32 conc=1 n=24 err=0 ttft_p50=25.7ms tpot_p50=3.48ms tok/s=232.9 acc=0.235 mal=2.88 kv_max=0.001 short=0
+[eagle3_k8] len=32 conc=4 n=24 err=0 ttft_p50=46.7ms tpot_p50=5.38ms tok/s=577.6 acc=0.237 mal=2.89 kv_max=0.002 short=0
+[eagle3_k8] len=32 conc=16 n=72 err=0 ttft_p50=64.6ms tpot_p50=7.26ms tok/s=1549.3 acc=0.243 mal=2.95 kv_max=0.011 short=0
+[eagle3_k8] len=128 conc=1 n=24 err=0 ttft_p50=25.9ms tpot_p50=4.49ms tok/s=216.8 acc=0.152 mal=2.22 kv_max=0.002 short=0
+[eagle3_k8] len=128 conc=4 n=24 err=0 ttft_p50=46.7ms tpot_p50=6.79ms tok/s=539.7 acc=0.152 mal=2.22 kv_max=0.006 short=0
+[eagle3_k8] len=128 conc=16 n=72 err=0 ttft_p50=67.0ms tpot_p50=9.58ms tok/s=1464.5 acc=0.151 mal=2.21 kv_max=0.022 short=0
+[eagle3_k8] len=512 conc=1 n=24 err=0 ttft_p50=27.1ms tpot_p50=4.56ms tok/s=218.4 acc=0.144 mal=2.15 kv_max=0.005 short=0
+[eagle3_k8] len=512 conc=4 n=24 err=0 ttft_p50=46.5ms tpot_p50=6.99ms tok/s=540.9 acc=0.144 mal=2.15 kv_max=0.016 short=0
+[eagle3_k8] len=512 conc=16 n=72 err=0 ttft_p50=67.5ms tpot_p50=9.95ms tok/s=1477.0 acc=0.148 mal=2.18 kv_max=0.063 short=0

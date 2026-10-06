@@ -1,0 +1,10 @@
+WARMUP_DONE 10-06 09:03:30
+[baseline] len=32 conc=1 n=24 err=0 ttft_p50=27.5ms tpot_p50=4.46ms tok/s=190.9 acc=- mal=- kv_max=0.001 short=0
+[baseline] len=32 conc=4 n=24 err=0 ttft_p50=62.8ms tpot_p50=7.39ms tok/s=429.7 acc=- mal=- kv_max=0.002 short=0
+[baseline] len=32 conc=16 n=72 err=0 ttft_p50=135.4ms tpot_p50=11.64ms tok/s=982.7 acc=- mal=- kv_max=0.003 short=0
+[baseline] len=128 conc=1 n=24 err=0 ttft_p50=28.7ms tpot_p50=4.48ms tok/s=213.8 acc=- mal=- kv_max=0.001 short=0
+[baseline] len=128 conc=4 n=24 err=0 ttft_p50=66.3ms tpot_p50=7.74ms tok/s=485.7 acc=- mal=- kv_max=0.005 short=0
+[baseline] len=128 conc=16 n=72 err=0 ttft_p50=128.6ms tpot_p50=12.44ms tok/s=1126.5 acc=- mal=- kv_max=0.017 short=0
+[baseline] len=512 conc=1 n=24 err=0 ttft_p50=31.3ms tpot_p50=4.50ms tok/s=219.3 acc=- mal=- kv_max=0.004 short=0
+[baseline] len=512 conc=4 n=24 err=0 ttft_p50=66.8ms tpot_p50=7.85ms tok/s=501.6 acc=- mal=- kv_max=0.015 short=0
+[baseline] len=512 conc=16 n=72 err=0 ttft_p50=128.2ms tpot_p50=13.11ms tok/s=1128.0 acc=- mal=- kv_max=0.062 short=0

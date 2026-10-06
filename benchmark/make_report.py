@@ -74,9 +74,9 @@ for method in sorted(m for m in df.method.unique() if m != "none"):
             s = sub[(sub.output_len == L) & (sub.concurrency == conc)].sort_values("k")
             axes[0][j].plot(s.k, s.e2e_speedup, marker="o", label=f"conc={conc}")
             axes[1][j].plot(s.k, s.throughput_speedup, marker="o", label=f"conc={conc}")
-        for i, name in enumerate(["per-request E2E speedup (p50)", "server output tok/s speedup"]):
+        for i, name in enumerate(["per-request E2E speedup (p50)", "server tok/s speedup"]):
             axes[i][j].axhline(1.0, color="grey", ls="--", lw=1)
-            axes[i][j].set_title(f"{method}, output_len={L}: {name}")
+            axes[i][j].set_title(f"{method}, len={L}\n{name}", fontsize=10)
             axes[i][j].set_xlabel("K (num speculative tokens)")
             axes[i][j].set_xscale("log", base=2)
             axes[i][j].legend()

@@ -1,0 +1,107 @@
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                       fused_moe_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     661.116ms        57.62%     661.116ms     135.032us          4896  
+                 execute_context_0(0)_generation_16(80)         0.00%       0.000us         0.00%       0.000us       0.000us     613.249ms        53.45%     613.249ms      18.583ms            33  
+                                               aten::mm        11.11%     243.092ms        15.58%     340.769ms      14.750us     183.163ms        15.96%     183.393ms       7.938us         23103  
+                 execute_context_0(0)_generation_14(70)         0.00%       0.000us         0.00%       0.000us       0.000us      92.437ms         8.06%      92.437ms      18.487ms             5  
+void cutlass::device_kernel<flash::enable_sm90_or_la...         0.00%       0.000us         0.00%       0.000us       0.000us      91.997ms         8.02%      91.997ms      11.448us          8036  
+                                       _vllm_fa3_C::fwd         6.73%     147.258ms        12.25%     267.848ms      46.117us      81.877ms         7.14%      81.906ms      14.102us          5808  
+                 execute_context_0(0)_generation_10(50)         0.00%       0.000us         0.00%       0.000us       0.000us      49.551ms         4.32%      49.551ms      16.517ms             3  
+                  execute_context_0(0)_generation_8(40)         0.00%       0.000us         0.00%       0.000us       0.000us      33.245ms         2.90%      33.245ms      16.623ms             2  
+                execute_context_15(439)_generation_1(5)         0.00%       0.000us         0.00%       0.000us       0.000us      26.374ms         2.30%      26.374ms      26.374ms             1  
+                nvjet_sm90_tst_64x16_64x16_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      26.114ms         2.28%      26.114ms       7.230us          3612  
+void cutlass::device_kernel<flash::FlashAttnFwdCombi...         0.00%       0.000us         0.00%       0.000us       0.000us      21.273ms         1.85%      21.273ms       2.607us          8160  
+                 nvjet_sm90_tst_64x8_64x16_1x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      21.063ms         1.84%      21.063ms       5.831us          3612  
+                 nvjet_sm90_tst_64x8_64x16_4x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      20.683ms         1.80%      20.683ms       5.639us          3668  
+void vllm::reshape_and_cache_flash_kernel<__nv_bfloa...         0.00%       0.000us         0.00%       0.000us       0.000us      19.514ms         1.70%      19.514ms       2.391us          8160  
+                nvjet_sm90_tst_384x16_64x4_2x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      18.681ms         1.63%      18.681ms     107.982us           173  
+                nvjet_sm90_tst_64x80_64x11_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      18.178ms         1.58%      18.178ms       9.816us          1852  
+                 execute_context_0(0)_generation_13(65)         0.00%       0.000us         0.00%       0.000us       0.000us      17.771ms         1.55%      17.771ms      17.771ms             1  
+                nvjet_sm90_tst_64x32_64x16_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      17.460ms         1.52%      17.460ms      10.058us          1736  
+                  execute_context_0(0)_generation_7(35)         0.00%       0.000us         0.00%       0.000us       0.000us      15.678ms         1.37%      15.678ms      15.678ms             1  
+         nvjet_sm90_tst_64x16_64x16_4x1_v_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      15.493ms         1.35%      15.493ms       5.425us          2856  
+                  execute_context_1(25)_generation_0(0)         0.00%       0.000us         0.00%       0.000us       0.000us      14.825ms         1.29%      14.825ms      14.825ms             1  
+                  execute_context_0(0)_generation_6(30)         0.00%       0.000us         0.00%       0.000us       0.000us      14.809ms         1.29%      14.809ms      14.809ms             1  
+                  execute_context_0(0)_generation_5(25)         0.00%       0.000us         0.00%       0.000us       0.000us      13.963ms         1.22%      13.963ms      13.963ms             1  
+                  _C_cache_ops::reshape_and_cache_flash         1.57%      34.268ms         2.62%      57.381ms       9.880us      13.953ms         1.22%      13.955ms       2.403us          5808  
+                  execute_context_0(0)_generation_3(15)         0.00%       0.000us         0.00%       0.000us       0.000us      13.350ms         1.16%      13.350ms      13.350ms             1  
+                 nvjet_sm90_tst_64x8_64x16_2x4_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      12.984ms         1.13%      12.984ms       5.330us          2436  
+                 nvjet_sm90_tst_64x8_64x16_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us      12.787ms         1.11%      12.787ms       5.953us          2148  
+                  triton_per_fused_fused_add_rms_norm_2         1.84%      40.190ms         2.58%      56.333ms       9.862us      11.532ms         1.01%      11.532ms       2.019us          5712  
+                  triton_per_fused_fused_add_rms_norm_2         0.00%       0.000us         0.00%       0.000us       0.000us      11.532ms         1.01%      11.532ms       2.019us          5712  
+                                     triton_red_fused_3         1.97%      42.982ms         2.75%      60.255ms      10.939us      11.413ms         0.99%      11.415ms       2.072us          5508  
+                                     triton_red_fused_3         0.00%       0.000us         0.00%       0.000us       0.000us      11.413ms         0.99%      11.413ms       2.072us          5508  
+void vllm::moe::topkGating<8, 128, 4, 16, 32, int, _...         0.00%       0.000us         0.00%       0.000us       0.000us      10.047ms         0.88%      10.047ms       4.104us          2448  
+                  triton_per_fused_fused_add_rms_norm_0         2.40%      52.540ms         3.22%      70.423ms      12.329us       9.831ms         0.86%       9.835ms       1.722us          5712  
+                  triton_per_fused_fused_add_rms_norm_0         0.00%       0.000us         0.00%       0.000us       0.000us       9.831ms         0.86%       9.831ms       1.721us          5712  
+void cublasLt::splitKreduce_kernel<32, 16, int, floa...         0.00%       0.000us         0.00%       0.000us       0.000us       9.547ms         0.83%       9.547ms       1.865us          5120  
+                   execute_context_0(0)_generation_1(5)         0.00%       0.000us         0.00%       0.000us       0.000us       8.582ms         0.75%       8.582ms       8.582ms             1  
+                      triton_poi_fused_mul_silu_slice_1         1.39%      30.481ms         2.15%      46.936ms       8.217us       8.183ms         0.71%       8.183ms       1.433us          5712  
+                      triton_poi_fused_mul_silu_slice_1         0.00%       0.000us         0.00%       0.000us       0.000us       8.183ms         0.71%       8.183ms       1.433us          5712  
+                nvjet_sm90_tst_64x24_64x16_2x4_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       8.161ms         0.71%       8.161ms       6.108us          1336  
+void vllm::moe::moe_align_block_size_kernel<int>(int...         0.00%       0.000us         0.00%       0.000us       0.000us       7.539ms         0.66%       7.539ms       3.080us          2448  
+                nvjet_sm90_tst_64x16_64x16_4x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       7.496ms         0.65%       7.496ms       7.649us           980  
+          nvjet_sm90_tst_384x80_64x3_2x1_v_bz_coopA_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       7.277ms         0.63%       7.277ms     220.504us            33  
+                nvjet_sm90_tst_64x96_64x10_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       7.216ms         0.63%       7.216ms       7.809us           924  
+void vllm::moe::moe_sum_vec_kernel<c10::BFloat16, in...         0.00%       0.000us         0.00%       0.000us       0.000us       6.869ms         0.60%       6.869ms       2.806us          2448  
+                nvjet_sm90_tst_64x48_64x15_1x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       6.686ms         0.58%       6.686ms       6.284us          1064  
+void vllm::act_and_mul_kernel<c10::BFloat16, __nv_bf...         0.00%       0.000us         0.00%       0.000us       0.000us       6.531ms         0.57%       6.531ms       2.668us          2448  
+                                     triton_red_fused_2         0.00%       0.000us         0.00%       0.000us       0.000us       5.894ms         0.51%       5.894ms       2.459us          2397  
+                  triton_red_fused_fused_add_rms_norm_1         0.00%       0.000us         0.00%       0.000us       0.000us       5.880ms         0.51%       5.880ms       2.402us          2448  
+      triton_red_fused_fused_add_rms_norm_moe_forward_0         0.00%       0.000us         0.00%       0.000us       0.000us       5.859ms         0.51%       5.859ms       2.393us          2448  
+          nvjet_sm90_tst_64x8_64x16_4x2_h_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       4.101ms         0.36%       4.101ms       5.425us           756  
+          nvjet_sm90_tst_64x8_64x16_4x1_v_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       4.085ms         0.36%       4.085ms       5.461us           748  
+                 nvjet_sm90_tst_384x8_64x4_2x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       3.762ms         0.33%       3.762ms     110.653us            34  
+void vllm::moe::count_and_sort_expert_tokens_kernel<...         0.00%       0.000us         0.00%       0.000us       0.000us       3.648ms         0.32%       3.648ms       1.490us          2448  
+                nvjet_sm90_tst_64x40_64x16_4x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       2.836ms         0.25%       2.836ms       9.849us           288  
+                                           aten::argmax         0.16%       3.476ms         0.24%       5.251ms      25.615us       2.458ms         0.21%       2.458ms      11.991us           205  
+void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us       2.282ms         0.20%       2.282ms      11.188us           204  
+                nvjet_sm90_tst_64x40_64x16_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       2.268ms         0.20%       2.268ms       9.144us           248  
+                                            aten::copy_         0.34%       7.378ms         0.81%      17.615ms       6.916us       2.061ms         0.18%       2.062ms       0.810us          2547  
+void cutlass::device_kernel<flash::enable_sm90_or_la...         0.00%       0.000us         0.00%       0.000us       0.000us       1.863ms         0.16%       1.863ms      15.024us           124  
+         nvjet_sm90_tst_64x40_64x16_4x1_v_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       1.672ms         0.15%       1.672ms       8.706us           192  
+                nvjet_sm90_tst_64x56_64x14_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       1.433ms         0.12%       1.433ms       9.950us           144  
+          nvjet_sm90_tst_384x72_64x3_2x1_v_bz_coopA_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       1.310ms         0.11%       1.310ms     218.356us             6  
+         nvjet_sm90_tst_64x56_64x14_4x1_v_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       1.257ms         0.11%       1.257ms       8.732us           144  
+                nvjet_sm90_tst_64x88_64x11_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us       1.109ms         0.10%       1.109ms       7.923us           140  
+                nvjet_sm90_tst_64x24_64x16_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     815.389us         0.07%     815.389us       7.840us           104  
+         nvjet_sm90_tst_64x32_64x16_4x1_v_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     810.769us         0.07%     810.769us       8.446us            96  
+         nvjet_sm90_tst_64x32_64x16_4x2_h_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     799.163us         0.07%     799.163us       5.708us           140  
+               nvjet_sm90_tst_128x160_64x5_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     797.976us         0.07%     797.976us      16.624us            48  
+                nvjet_sm90_tst_128x64_64x8_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     786.364us         0.07%     786.364us      16.383us            48  
+                          _compute_slot_mappings_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     777.475us         0.07%     777.475us       3.049us           255  
+                         Memcpy DtoD (Device -> Device)         0.00%       0.000us         0.00%       0.000us       0.000us     740.704us         0.06%     740.704us       1.104us           671  
+                nvjet_sm90_tst_384x56_64x3_2x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     652.955us         0.06%     652.955us     217.652us             3  
+                nvjet_sm90_tst_64x48_64x15_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     646.043us         0.06%     646.043us       7.691us            84  
+                nvjet_sm90_tst_384x40_64x3_2x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     640.474us         0.06%     640.474us     213.491us             3  
+                                            aten::fill_         0.22%       4.745ms         0.43%       9.440ms       8.281us     633.948us         0.06%     634.940us       0.557us          1140  
+                     _compute_local_logits_stats_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     633.823us         0.06%     633.823us      12.676us            50  
+                    _vllm_fa3_C::get_scheduler_metadata         0.24%       5.253ms         0.40%       8.724ms      28.509us     624.217us         0.05%     624.217us       2.040us           306  
+void flash::prepare_varlen_num_blocks_kernel<1, fals...         0.00%       0.000us         0.00%       0.000us       0.000us     624.217us         0.05%     624.217us       2.040us           306  
+                nvjet_sm90_tst_48x64_64x15_2x1_v_bz_TNN         0.00%       0.000us         0.00%       0.000us       0.000us     613.271us         0.05%     613.271us       7.301us            84  
+                                       _resample_kernel         0.00%       0.000us         0.00%       0.000us       0.000us     570.554us         0.05%     570.554us      11.411us            50  
+                                     triton_red_fused_1         0.00%       0.000us         0.00%       0.000us       0.000us     567.324us         0.05%     567.324us       2.225us           255  
+                nvjet_sm90_tst_64x24_64x16_1x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     513.402us         0.04%     513.402us       6.112us            84  
+                nvjet_sm90_tst_64x96_64x10_4x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     483.579us         0.04%     483.579us       8.635us            56  
+                nvjet_sm90_tst_48x64_64x15_4x1_v_bz_TNN         0.00%       0.000us         0.00%       0.000us       0.000us     482.302us         0.04%     482.302us       5.742us            84  
+                nvjet_sm90_tst_64x72_64x12_4x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     473.629us         0.04%     473.629us       9.867us            48  
+         nvjet_sm90_tst_64x16_64x16_4x2_h_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     472.605us         0.04%     472.605us       5.626us            84  
+                                              aten::add         0.14%       3.138ms         0.24%       5.240ms       8.563us     463.646us         0.04%     463.646us       0.758us           612  
+         triton_per_fused__to_copy_embedding_rms_norm_0         0.16%       3.401ms         0.21%       4.564ms      22.370us     458.047us         0.04%     458.047us       2.245us           204  
+         triton_per_fused__to_copy_embedding_rms_norm_0         0.00%       0.000us         0.00%       0.000us       0.000us     458.047us         0.04%     458.047us       2.245us           204  
+                                            aten::index         0.16%       3.410ms         0.29%       6.373ms      24.799us     456.160us         0.04%     525.342us       2.044us           257  
+                                            aten::clamp         0.09%       1.865ms         0.15%       3.176ms       8.896us     440.960us         0.04%     440.960us       1.235us           357  
+                                     triton_red_fused_1         0.11%       2.421ms         0.14%       3.152ms      15.452us     435.323us         0.04%     435.323us       2.134us           204  
+                nvjet_sm90_tst_384x32_64x4_2x1_v_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     420.221us         0.04%     420.221us     210.110us             2  
+         nvjet_sm90_tst_64x24_64x16_4x1_v_bz_splitK_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     399.164us         0.03%     399.164us       8.316us            48  
+                                        Memset (Device)         0.00%       0.000us         0.00%       0.000us       0.000us     392.955us         0.03%     392.955us       0.856us           459  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     341.502us         0.03%     341.502us       1.344us           254  
+                nvjet_sm90_tst_64x24_64x16_4x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     335.548us         0.03%     335.548us       5.992us            56  
+         nvjet_sm90_tst_192x128_64x5_1x2_h_bz_coopB_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     333.633us         0.03%     333.633us      11.915us            28  
+                nvjet_sm90_tst_64x16_64x16_1x2_h_bz_TNT         0.00%       0.000us         0.00%       0.000us       0.000us     324.449us         0.03%     324.449us       5.794us            56  
+                         Memcpy HtoD (Pinned -> Device)         0.00%       0.000us         0.00%       0.000us       0.000us     319.904us         0.03%     319.904us       1.052us           304  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 2.187s
+Self CUDA time total: 1.147s
+

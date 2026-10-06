@@ -1,0 +1,56 @@
+[
+  {
+    "run": "eagle3_k1",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "eagle3_k2",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "eagle3_k4",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "eagle3_k8",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "draft_model_k1",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "draft_model_k2",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "draft_model_k4",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "draft_model_k8",
+    "compared": 72,
+    "exact_match": 72,
+    "mean_matching_prefix_frac": 1.0
+  },
+  {
+    "run": "ngram_k4",
+    "compared": 72,
+    "exact_match": 70,
+    "mean_matching_prefix_frac": 0.9823684771065861
+  }
+]

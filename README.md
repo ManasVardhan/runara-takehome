@@ -4,9 +4,36 @@ Baseline vs. speculative decoding (separate draft model, EAGLE-3, n-gram) in vLL
 benchmarked across speculation length K, output length and concurrency, profiled with the torch
 profiler, and explained against the engine source.
 
-- **Results summary:** [`results/summary.md`](results/summary.md) (assignment table format), every cell in [`results/all_cells.md`](results/all_cells.md) / `.csv`
-- **Analysis (Parts 2, 4, 5, 6):** [`analysis.md`](analysis.md)
-- **Plan and requirement traceability:** [`docs/PLAN.md`](docs/PLAN.md)
+- **Analysis (all six parts, answers to Q1-Q5):** [`analysis.md`](analysis.md)
+- **Results tables:** [`results/summary.md`](results/summary.md) (assignment table format, per output length),
+  [`results/step_cost.md`](results/step_cost.md) (acceptance vs step cost), every cell in
+  [`results/all_cells.md`](results/all_cells.md) / `.csv`
+- **Plan and requirement traceability:** [`docs/PLAN.md`](docs/PLAN.md); engine source notes: [`docs/internals_notes.md`](docs/internals_notes.md)
+
+## Headline results (128-token outputs, greedy)
+
+| Configuration | K | Conc | TTFT p50 (ms) | TPOT p50 (ms) | Server tok/s | Acceptance | Tokens/step |
+|---|---|---|---|---|---|---|---|
+| Baseline | - | 1 | 28.7 | 4.48 | 214 | - | - |
+| EAGLE-3 | 1 | 1 | 30.7 | **3.52** | **269** | 0.59 | 1.59 |
+| EAGLE-3 | 4 | 1 | 25.5 | 3.67 | 260 | 0.28 | 2.13 |
+| EAGLE-3 | 8 | 1 | 25.9 | 4.49 | 217 | 0.15 | 2.22 |
+| Draft Qwen3-0.6B | 1 | 1 | 28.1 | 4.76 | 199 | 0.76 | 1.76 |
+| Draft Qwen3-0.6B | 4 | 1 | 68.3 | 8.63 | 113 | 0.52 | 3.10 |
+| Draft Qwen3-0.6B | 8 | 1 | 118.3 | 13.99 | 70 | 0.35 | 3.79 |
+| n-gram | 4 | 1 | 26.5 | 5.76 | 171 | (0.32) | (2.30) |
+| Baseline | - | 4 | 66.3 | 7.74 | 486 | - | - |
+| EAGLE-3 | 2 | 4 | 47.1 | **5.60** | **653** | 0.45 | 1.90 |
+| Baseline | - | 16 | 128.6 | 12.44 | 1127 | - | - |
+| EAGLE-3 | 2 | 16 | 68.8 | **8.83** | **1616** | 0.45 | 1.90 |
+| Draft Qwen3-0.6B | 2 | 16 | 65.9 | 8.83 | 1589 | 0.67 | 2.34 |
+
+- EAGLE-3 helps in every regime (1.22-1.48x TPOT at concurrency 1, up to 1.67x throughput at 16); K=8 overshoots.
+- The 0.6B draft has the highest acceptance yet slows single requests (its drafter is CPU launch-bound
+  under piecewise CUDA graphs) and only pays off under concurrency, where its overhead is amortized.
+- Greedy outputs with speculation are byte-identical to the baseline (576/576 at concurrency 1).
+- Run-to-run noise: median 0.9% (TPOT), 1.2% (throughput) across 60 repeated cells (`results/noise.md`).
+- Total GPU cost of the study: about 2.7 H100-hours.
 
 ## Setup
 
@@ -48,8 +75,10 @@ python benchmark/benchmark.py --label baseline --out results/raw/baseline.jsonl 
 ./run_speculative.sh --method eagle3 --num-speculative-tokens 4      # or draft_model / ngram
 python benchmark/benchmark.py --label eagle3_k4 --method eagle3 --k 4 --out results/raw/eagle3_k4.jsonl --concurrency 4
 
-# Whole matrix (server restart per config), temperature slice, noise replicate
+# Whole matrix (server restart per config), temperature slice, noise replicate (~55 min on an H100)
 ./run_all.sh            # = ./sweep.sh ; TEMP=0.7 ./sweep.sh ... ; LABEL_SUFFIX=_rep ./sweep.sh ...
+# benchmark.py warms up every concurrency level before measuring; sweep.sh then records any Triton
+# JIT compile that still happened after warmup in results/logs/jit_after_warmup_<label>.txt (all empty).
 
 # Lossless check: greedy outputs with speculation vs. baseline
 python benchmark/lossless_check.py --baseline results/raw/baseline.jsonl.requests.jsonl \
@@ -59,8 +88,9 @@ python benchmark/lossless_check.py --baseline results/raw/baseline.jsonl.request
 # sweep.sh captures traces after benchmarking; analyze them:
 python benchmark/analyze_trace.py results/traces/* --out results/profile_summary.json
 
-# Tables and plots
+# Tables and plots, run-to-run noise (run 1 vs final run)
 python benchmark/make_report.py
+python benchmark/compare_runs.py --a results/run1/raw --b results/raw
 ```
 
 ## Layout
@@ -76,8 +106,12 @@ benchmark/profile_load.py   /start_profile -> fixed load -> /stop_profile, colle
 benchmark/analyze_trace.py  per-phase / per-kernel-family GPU time, step time vs tokens per step
 benchmark/lossless_check.py greedy output equality vs baseline
 benchmark/make_report.py    tables (summary.md, all_cells.md/csv) and plots
-results/raw/            one JSONL row per cell + per-request records (incl. generated text)
-results/logs/           server logs and the exact speculative configs used
+results/raw/            final run: one JSONL row per cell + per-request records (incl. generated text)
+results/run1/raw/       first full run (its 32-token cells hit mid-run JIT compiles; used only for noise)
+results/logs/           server + benchmark logs, exact speculative configs, post-warmup JIT checks
+results/traces/         torch-profiler traces (baseline, eagle3 K=4, draft_model K=4 at conc 1 and 16)
+results/profile_summary.json  trace breakdown; results/cpu_samples/  EngineCore CPU vs GPU util
+results/lossless_check.json   greedy output equality; results/noise.md  run-to-run variance
 ```
 
 ## Metric definitions

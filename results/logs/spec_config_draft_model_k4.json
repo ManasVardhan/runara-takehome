@@ -1,0 +1,1 @@
+{"method":"draft_model","model":"Qwen/Qwen3-0.6B","num_speculative_tokens":4,"draft_tensor_parallel_size":1}
