@@ -264,10 +264,17 @@ async def main():
         prompts = [json.loads(l)["prompt"] for l in f if l.strip()]
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
 
-    # Warmup so CUDA-graph capture / first-request costs do not land in cell 1.
+    # Warmup. vLLM JIT-compiles some Triton kernels (rejection/resample sampler kernels,
+    # top-k/top-p and Gumbel sampling for temperature > 0, fused_moe for new token-count
+    # shapes) on first use, which stalls the engine for seconds. Run every concurrency
+    # level at the same sampling settings first so no compile lands inside a measured cell.
+    # sweep.sh then checks the server log for any JIT compile after WARMUP_DONE.
     async with aiohttp.ClientSession() as s:
-        for p in prompts[: args.warmup]:
-            await one_request(s, args, p, 16)
+        for _ in range(args.warmup):
+            for conc in [int(x) for x in args.concurrency.split(",")] + [64]:
+                await asyncio.gather(*(one_request(s, args, prompts[i % len(prompts)], 48)
+                                       for i in range(conc)))
+    print(f"WARMUP_DONE {time.strftime('%m-%d %H:%M:%S', time.gmtime())}", flush=True)
 
     for output_len in [int(x) for x in args.output_lens.split(",")]:
         for conc in [int(x) for x in args.concurrency.split(",")]:
