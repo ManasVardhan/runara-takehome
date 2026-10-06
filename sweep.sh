@@ -15,7 +15,7 @@ if [[ ${#CONFIGS[@]} -eq 0 ]]; then
   CONFIGS=(baseline eagle3:1 eagle3:2 eagle3:4 eagle3:8
            draft_model:1 draft_model:2 draft_model:4 draft_model:8 ngram:4)
 fi
-source /root/venv/bin/activate
+source "${VENV:-/root/venv}/bin/activate"
 SUFFIX="${LABEL_SUFFIX:-}"; [[ $TEMP != 0 ]] && SUFFIX="${SUFFIX}_t${TEMP}"
 for cfg in "${CONFIGS[@]}"; do
   echo "=== $cfg $(date -u +%H:%M:%S)"

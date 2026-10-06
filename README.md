@@ -16,21 +16,25 @@ profiler, and explained against the engine source.
 |---|---|---|---|---|---|---|---|
 | Baseline | - | 1 | 28.7 | 4.48 | 214 | - | - |
 | EAGLE-3 | 1 | 1 | 30.7 | **3.52** | **269** | 0.59 | 1.59 |
+| EAGLE-3 | 2 | 1 | 33.8 | 3.63 | 258 | 0.45 | 1.90 |
 | EAGLE-3 | 4 | 1 | 25.5 | 3.67 | 260 | 0.28 | 2.13 |
 | EAGLE-3 | 8 | 1 | 25.9 | 4.49 | 217 | 0.15 | 2.22 |
 | Draft Qwen3-0.6B | 1 | 1 | 28.1 | 4.76 | 199 | 0.76 | 1.76 |
+| Draft Qwen3-0.6B | 2 | 1 | 43.6 | 6.21 | 154 | 0.67 | 2.34 |
 | Draft Qwen3-0.6B | 4 | 1 | 68.3 | 8.63 | 113 | 0.52 | 3.10 |
 | Draft Qwen3-0.6B | 8 | 1 | 118.3 | 13.99 | 70 | 0.35 | 3.79 |
 | n-gram | 4 | 1 | 26.5 | 5.76 | 171 | (0.32) | (2.30) |
 | Baseline | - | 4 | 66.3 | 7.74 | 486 | - | - |
-| EAGLE-3 | 2 | 4 | 47.1 | **5.60** | **653** | 0.45 | 1.90 |
+| EAGLE-3 | 2 | 4 | 47.1 | **5.53** | **657** | 0.46 | 1.92 |
 | Baseline | - | 16 | 128.6 | 12.44 | 1127 | - | - |
 | EAGLE-3 | 2 | 16 | 68.8 | **8.83** | **1616** | 0.45 | 1.90 |
 | Draft Qwen3-0.6B | 2 | 16 | 65.9 | 8.83 | 1589 | 0.67 | 2.34 |
 
-- EAGLE-3 helps in every regime (1.22-1.48x TPOT at concurrency 1, up to 1.67x throughput at 16); K=8 overshoots.
-- The 0.6B draft has the highest acceptance yet slows single requests (its drafter is CPU launch-bound
-  under piecewise CUDA graphs) and only pays off under concurrency, where its overhead is amortized.
+- EAGLE-3 at K=1-4 helps in every regime (1.22-1.48x TPOT at concurrency 1, up to 1.67x throughput at 16); K=8 overshoots.
+- The 0.6B draft has the highest acceptance yet slows single requests (its drafter replays no CUDA graphs
+  and is CPU launch-bound) and only pays off under concurrency, where its overhead is amortized.
+- n-gram (prompt lookup) is slower than baseline on these open-ended prompts.
+- (n-gram acceptance and tokens/step in parentheses count only steps where an n-gram matched.)
 - Greedy outputs with speculation are byte-identical to the baseline (576/576 at concurrency 1).
 - Run-to-run noise: median 0.9% (TPOT), 1.2% (throughput) across 60 repeated cells (`results/noise.md`).
 - Total GPU cost of the study: about 2.7 H100-hours.
@@ -48,7 +52,7 @@ profiler, and explained against the engine source.
 | Sampling | temperature 0 (greedy) for the main matrix; one slice at temperature 0.7 (with Qwen's `generation_config.json` defaults top_k=20, top_p=0.95, which vLLM applies unless overridden); `ignore_eos=true`, `max_tokens` = output length; Qwen3 chat template with thinking mode on (the model's default) |
 | Workload | 24 fixed real prompts (`benchmark/prompts.jsonl`: code, math, explanation, writing, summarization/extraction); output lengths 32 / 128 / 512; closed-loop concurrency 1 / 4 / 16 with 24 / 24 / 72 requests per cell (whole multiples of the prompt set) |
 
-Full environment dump: [`results/env.txt`](results/env.txt).
+Full environment dump: [`results/env.txt`](results/env.txt) (regenerate with `scripts/collect_env.sh`).
 
 ## Install
 
@@ -73,19 +77,22 @@ python benchmark/benchmark.py --label baseline --out results/raw/baseline.jsonl 
 
 # Speculative server; K is exposed directly
 ./run_speculative.sh --method eagle3 --num-speculative-tokens 4      # or draft_model / ngram
-python benchmark/benchmark.py --label eagle3_k4 --method eagle3 --k 4 --out results/raw/eagle3_k4.jsonl --concurrency 4
+python benchmark/benchmark.py --label eagle3_k4 --method eagle3 --k 4 --concurrency 4 \
+    --spec-config "$(cat results/logs/spec_config_eagle3_k4.json)" --out results/raw/eagle3_k4.jsonl
 
 # Whole matrix (server restart per config), temperature slice, noise replicate (~55 min on an H100)
 ./run_all.sh            # = ./sweep.sh ; TEMP=0.7 ./sweep.sh ... ; LABEL_SUFFIX=_rep ./sweep.sh ...
 # benchmark.py warms up every concurrency level before measuring; sweep.sh then records any Triton
 # JIT compile that still happened after warmup in results/logs/jit_after_warmup_<label>.txt (all empty).
 
-# Lossless check: greedy outputs with speculation vs. baseline
+# Lossless check: greedy outputs with speculation vs. baseline (concurrency 1)
 python benchmark/lossless_check.py --baseline results/raw/baseline.jsonl.requests.jsonl \
-    --spec results/raw/eagle3_k*.jsonl.requests.jsonl results/raw/draft_model_k*.jsonl.requests.jsonl
+    --spec results/raw/{eagle3,draft_model}_k{1,2,4,8}.jsonl.requests.jsonl results/raw/ngram_k4.jsonl.requests.jsonl \
+    --out results/lossless_check.json
 
-# Profiling: servers start with --profiler-config (torch profiler armed, idle);
-# sweep.sh captures traces after benchmarking; analyze them:
+# Profiling: servers start with --profiler-config (torch profiler armed, idle, writing to
+# $TRACE_DIR=/workspace/traces_raw); sweep.sh then runs profile_load.py, which moves each capture
+# into results/traces/<label>_c<conc>/. Analyze them:
 python benchmark/analyze_trace.py results/traces/* --out results/profile_summary.json
 
 # Tables and plots, run-to-run noise (run 1 vs final run)

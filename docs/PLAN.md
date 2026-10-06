@@ -1,5 +1,17 @@
 # Plan: Speculative decoding in vLLM on Qwen3-30B-A3B
 
+> This is the plan as written before any GPU work. What changed during execution:
+> - **Main draft.** EAGLE-3 turned out to be the useful draft. The Qwen3-0.6B `draft_model` became the
+>   contrast case (the best guesser, but CPU launch-bound).
+> - **Part 6 topic.** The deep dive became drafter execution and CUDA graphs, because that is what the
+>   data pointed to. Verification and KV-cache handling are covered in Part 2.
+> - **Temperature slice.** It showed no acceptance drop on this workload (analysis Q3).
+> - **Environment record.** It lives in `results/env.txt` (not `env.json`). Engine args are in the README,
+>   and the per-run spec config is in `results/logs/spec_config_*.json` and every result row.
+> - **Reruns.** A first full run was partly contaminated by mid-cell Triton JIT compiles. The warmup was
+>   extended, every config was rerun, and the first run is kept as a noise replicate.
+> - **Actual GPU time.** About 2.7 H100-hours (about $9.60), against a 5.2-hour budget.
+
 ## Fixed decisions
 
 | Item | Choice | Why |

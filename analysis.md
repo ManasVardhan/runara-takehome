@@ -8,24 +8,27 @@ cell with the same output length, concurrency and temperature.
 
 ## TL;DR
 
-1. **EAGLE-3 helps everywhere except at K=8 on long outputs.** At concurrency 1 it cuts TPOT by
-   1.22-1.48x. At concurrency 16 it raises server throughput by 1.30-1.67x. Best K is 1-4 (Q4).
+1. **EAGLE-3 at K=1-4 helps in every regime we measured.** At concurrency 1 it improves TPOT by
+   1.22-1.48x; at concurrency 16 it raises server throughput by 1.30-1.67x. K=8 overshoots: it is
+   break-even at concurrency 1 on 128/512-token outputs and below K=4 everywhere.
 2. **The separate Qwen3-0.6B draft is the better guesser but the worse draft.** It has 73-93%
    acceptance against EAGLE-3's 58-71% at K=1. Even so, it makes single-request decoding slower (TPOT
-   0.29-0.94x for 128/512-token outputs). Each 0.6B draft pass costs about 3.7-6.3 ms, close to a full
-   target decode step (4.4 ms). The profiler shows why: the drafter only runs under piecewise CUDA graphs
-   and is CPU launch-bound, with GPU busy 25% of the time against 91-96% for the baseline and EAGLE-3.
+   0.29-0.94x for 128/512-token outputs). Each extra draft token costs about 3.7-6.3 ms of step time,
+   close to a full target decode step (4.4 ms). The profiler shows why: no drafter CUDA-graph replays,
+   about 365 kernel launches per draft pass, and an engine process pinned at one CPU core while the GPU
+   sits at 53% utilization (NVML, K=4, concurrency 1) against 93-95% for the baseline and EAGLE-3.
 3. **The single-request conclusion flips under concurrency.** At concurrency 16 the same 0.6B draft gives
    1.28-1.68x TPOT speedup at K=1-4. Its per-pass overhead is roughly fixed, so a batch amortizes it.
    The MoE target also makes verification relatively cheaper at large batch, because the experts are
    already being loaded.
-4. **Acceptance rate alone predicts nothing; acceptance x draft cost does.** Tokens per verification step
-   rise with K while acceptance falls, and draft cost grows linearly in K. Speedup peaks at K=2-4 and
-   then declines. K=8 is worse than K=4 in every EAGLE-3 cell.
+4. **Acceptance rate is not enough on its own; acceptance has to be weighed against draft cost.** Tokens
+   per verification step rise with K while acceptance falls, and draft cost grows linearly in K. The best
+   K is small and moves with load: K=1 for single long requests, K=2-4 at concurrency 16. K=8 is worse
+   than K=4 in every EAGLE-3 cell.
 5. **Speculation never hurts correctness.** Greedy outputs at concurrency 1 are byte-identical to the
    baseline for all 576 requests from EAGLE-3 and draft_model. Two n-gram requests flipped a near-tie
    token after 600+ characters, which is a numerics effect (below). It does cost KV memory: the draft
-   model shrinks the KV cache from 141,664 to 58,496 tokens.
+   model shrinks the KV cache from 141,664 to 54,576-58,496 tokens.
 
 ## Part 1: Baseline
 
@@ -43,7 +46,7 @@ details are in the README and `results/env.txt`.
 | 128 | 16 | 128.6 | 12.44 | 1707 | 1127 | 8.80 | 92% | 1.7% |
 | 512 | 1 | 31.3 | 4.50 | 2331 | 219 | 0.43 | 99% | 0.4% |
 | 512 | 4 | 66.8 | 7.85 | 4073 | 502 | 0.98 | 98% | 1.5% |
-| 512 | 16 | 128.2 | 13.12 | 6847 | 1128 | 2.20 | 98% | 6.2% |
+| 512 | 16 | 128.2 | 13.11 | 6847 | 1128 | 2.20 | 98% | 6.2% |
 
 From 1 to 16 concurrent requests, per-request latency (TTFT, TPOT, E2E) gets worse while server
 throughput rises about 5x: the usual batching trade-off. Short cells show lower NVML utilization because
@@ -58,8 +61,8 @@ GPU memory sits at about 72 GiB in every run. vLLM preallocates the KV cache up 
 The baseline already shows the property that drives everything later. **Going from 1 to 16 concurrent
 requests raises the per-step cost from 4.37 ms to 12.41 ms** (profiler, `results/profile_summary.json`).
 A dense model would be almost flat over that range. Each token routes to 8 of 128 experts, so a larger
-batch touches more distinct expert weights. `fused_moe_kernel` takes 45% of GPU kernel time at batch 1
-and 79% at batch 16.
+batch touches more distinct expert weights. `fused_moe_kernel` alone takes 37% of GPU kernel time at
+batch 1 and 74% at batch 16 (all MoE kernels together: 45% and 79%).
 
 ## Part 2: How the engine runs speculation
 
@@ -122,19 +125,24 @@ The data bears that out (Q3).
     for distance" vs "set up equations for the distance").
   - n-gram is the one method whose variable-length drafts change the target's kernel shapes (no
     uniform-decode FULL graph), so a bf16 rounding difference can flip a near-tie argmax.
-  - At concurrency 16, exact-match is not a valid test. **Two identical baseline runs agree on only 51/72
-    outputs**, because batch composition changes reduction order. The concurrency-1 result is the clean one.
+  - At concurrency 16, exact-match is not a clean test. **Two identical baseline runs agree on only 51/72
+    outputs (71%)**, because batch composition changes reduction order. Speculative runs agree with the
+    baseline on 106/216 (EAGLE-3 K=4) and 108/216 (draft K=4) outputs, about 50%: lower than baseline vs
+    baseline, as expected when verification also changes the kernel shapes (K+1 tokens per request), so
+    near-tie argmaxes flip more often. The concurrency-1 result, where batch composition is fixed, is the
+    test of losslessness.
 - **Per-position acceptance** (`results/acceptance_by_position.png`, from
   `vllm:spec_decode_num_accepted_tokens_per_pos`) decays monotonically along the draft. Position i counts
   only if positions 0..i-1 were accepted, which is the stop-at-first-mismatch rule.
-- **KV cost of a separate draft** (from the server startup logs):
+- **KV cost of a separate draft** (from the server startup logs; the pool shrinks slightly with K because
+  vLLM reserves K lookahead slots and larger CUDA-graph buffers):
 
-  | Config | KV pool (tokens) | vs baseline |
+  | Config | KV pool (tokens), K = 1 / 2 / 4 / 8 | vs baseline |
   |---|---|---|
   | baseline | 141,664 | 1.00 |
-  | ngram | 138,848 | 0.98 |
-  | eagle3 | 129,584 | 0.91 |
-  | draft_model | 58,496 | 0.41 |
+  | ngram (K=4) | 138,848 | 0.98 |
+  | eagle3 | 129,584 / 125,728 / 122,816 / 118,176 | 0.83-0.91 |
+  | draft_model | 58,496 / 57,648 / 56,704 / 54,576 | 0.39-0.41 |
 
   The 0.6B drafter's KV (28 layers x 8 KV heads) is larger per token than the target's (48 layers x 4 KV
   heads), and both share one pool. Peak KV usage for the same workload doubles: 13.5% vs 6.2% at
@@ -159,7 +167,7 @@ Below is the assignment's summary format for 128-token outputs, followed by the 
 | n-gram | 4 | 1 | 26.5 | 5.76 | 171 | 0.32* | 2.30* |
 | Baseline | - | 4 | 66.3 | 7.74 | 486 | - | - |
 | EAGLE-3 (best K at conc 1 = 1) | 1 | 4 | 47.2 | 5.77 | 634 | 0.61 | 1.61 |
-| EAGLE-3 K=2 | 2 | 4 | 47.1 | 5.60 | 653 | 0.45 | 1.90 |
+| EAGLE-3 K=2 | 2 | 4 | 47.1 | 5.53 | 657 | 0.46 | 1.92 |
 | Baseline | - | 16 | 128.6 | 12.44 | 1127 | - | - |
 | EAGLE-3 (best K at conc 1 = 1) | 1 | 16 | 72.5 | 9.46 | 1463 | 0.59 | 1.59 |
 | EAGLE-3 K=2 / K=4 | 2 / 4 | 16 | 68.8 / 60.0 | 8.83 / 8.83 | 1616 / 1609 | 0.45 / 0.28 | 1.90 / 2.14 |
@@ -180,17 +188,18 @@ non-empty drafts), so these figures overstate n-gram's per-step benefit. Judge n
 (per-request E2E speedup and server tok/s speedup vs K, per output length and concurrency) and
 `results/acceptance_by_position.png`.
 
-**Run-to-run noise** (`results/noise.md`). We ran every cell twice: a full first run, and the
-128/512-token cells again as part of the final run.
+**Run-to-run noise** (`results/noise.md`). We ran the whole matrix twice on fresh servers. The first
+run's 32-token cells are excluded from the comparison: Triton JIT compiles (new `fused_moe` shapes) landed
+in them, which vLLM's JIT monitor flagged in the server log. That leaves 60 repeated cells
+(128/512 tokens x every config x every concurrency). The final run warms up every concurrency level and
+records zero post-warmup JIT compiles for every config (`results/logs/jit_after_warmup_*.txt`).
 - Median absolute difference is **0.9% for TPOT, 1.2% for throughput, 0.0% for acceptance**.
-- GPU-bound configs (baseline, EAGLE-3) reproduce within about 2%.
-- The CPU-bound draft_model configs were 12-17% faster in the second run. That is consistent with their
-  sensitivity to host CPU state (Part 4).
-- We therefore treat differences under about 3% as noise for GPU-bound configs and about 15% for
-  draft_model. No conclusion below rests on a difference that small.
-- The first run's 32-token cells were discarded. Triton JIT compiles (new `fused_moe` shapes) landed in
-  them, which `vllm`'s JIT monitor flagged in the server log. The final run warms up every concurrency
-  level and records zero post-warmup JIT compiles for every config (`results/logs/jit_after_warmup_*.txt`).
+- GPU-bound configs (baseline, EAGLE-3, n-gram) mostly reproduce within 2-3%, with outliers up to 6.6%
+  in throughput.
+- The CPU-bound draft_model configs moved more (-5% to +17%, K=2 and K=4 by 10% or more, all faster in
+  the second run). That is consistent with their sensitivity to host CPU state (Part 4).
+- We therefore treat differences under about 5% as noise for GPU-bound configs and about 15% for
+  draft_model. Results inside those bands are reported as break-even, not as wins or losses.
 
 ## Part 4: Profiling: where the time goes
 
@@ -205,7 +214,7 @@ non-empty drafts), so these figures overstate n-gram's per-step benefit. Judge n
   per step.
 - NVML sampling during benchmarks, and `top` on the EngineCore process (`results/cpu_samples/`).
 
-| Trace | GPU busy | Target fwd | Draft fwd (graphs) | Eager kernels | Eager launches | Step GPU time |
+| Trace | GPU busy (traced) | Target fwd | Draft fwd (graphs) | Eager kernels | Eager launches | Target-step GPU time |
 |---|---|---|---|---|---|---|
 | baseline, conc 1 | 91% | 92% | - | 8% | 2,639 / 127 steps | 4.37 ms (1 token) |
 | baseline, conc 16 | 92% | 96% | - | 5% | 3,497 / 127 steps | 12.41 ms (16 tokens) |
@@ -214,28 +223,39 @@ non-empty drafts), so these figures overstate n-gram's per-step benefit. Judge n
 | draft_model K=4, conc 1 | **25%** | 52% | **0** | **48%** | **58,430 / 40 steps** | 8.36 ms (5 tokens) |
 | draft_model K=4, conc 16 | **45%** | 68% | **0** | 32% | **71,962 / 49 steps** | 18.80 ms (80 tokens) |
 
+Profiler caveat: CUPTI tracing adds per-launch overhead, which matters for a config that issues
+thousands of launches per step. The traced draft_model K=4 step takes 51 ms against 27 ms in the
+unprofiled benchmark (TPOT x tokens/step); EAGLE-3's traced step (7.9 ms) matches its benchmark step
+(7.8 ms). So the trace's 25% "GPU busy" overstates the idle time for draft_model; we use it for *where*
+the time goes and use unprofiled NVML for *how much*.
+
 ### Bottleneck 1 (the main one): the separate draft model is CPU launch-bound
 
 How we know:
-1. **Its GPU is mostly idle.** It is busy only 25% of the traced window at concurrency 1, against 91-96%
-   for baseline and EAGLE-3.
-2. **None of its kernels are graph replays.** Zero launches of 20 or more kernels lack MoE kernels;
-   there are about 1,460 eager launches per step against about 21 for the baseline. The source explains
-   why: `llm_base_proposer.py:424` says the drafter "Only supports PIECEWISE cudagraphs (via
-   mixed_mode)". Piecewise capture splits the model at every attention op, so each of the K passes of a
-   28-layer model becomes dozens of small CPU-issued launches. The EAGLE-3 server log shows its drafter
-   capturing FULL decode graphs ("Capturing decode CUDA graphs (FULL): 14"); the draft_model server log
-   has no drafter capture at all.
+1. **Its GPU waits, even without the profiler.** Unprofiled NVML utilization for draft_model K=4 at
+   concurrency 1 is 53%, against 93-95% for baseline and EAGLE-3 in the same cell. Over whole runs it falls
+   with K: 87/77/65/51% for K=1/2/4/8.
+2. **Its drafter does not replay CUDA graphs.** In the trace, no launch of 20 or more kernels lacks MoE
+   kernels, i.e. there is no drafter graph replay. There are about 1,460 eager launches per step against
+   about 21 for the baseline: about 365 per draft pass at K=4, which is what a 28-layer model run eagerly
+   looks like. The code path allows at most piecewise graphs for the drafter (`llm_base_proposer.py:424`:
+   "Only supports PIECEWISE cudagraphs (via mixed_mode)"), and the trace shows not even those being
+   replayed for draft decode steps. EAGLE-3's server log, in contrast, shows dedicated drafter captures
+   ("Capturing decode CUDA graphs (FULL)"), which the draft_model log lacks.
 3. **The engine process is CPU-saturated.** During the draft_model K=8 benchmark the EngineCore process
    ran at 90-110% CPU (one core) while NVML GPU utilization was 44-55%. During EAGLE-3 K=4 the GPU was
-   at 100% and the CPU at 50-90%. Mean NVML utilization over whole runs: draft_model K=1/2/4/8 =
-   87/77/65/51%, against 89-96% for baseline and EAGLE-3.
-4. **Per-draft-token cost is far above what the FLOPs predict.** From TPOT x tokens/step
-   (`results/step_cost.md`), each extra draft token adds 3.7-6.3 ms per step at concurrency 1. That is
-   comparable to an entire target decode step (4.4 ms), for a model with 0.6B parameters against 3.3B
-   active in the target. EAGLE-3 adds 0.7-1.2 ms per draft token.
-5. **Run-to-run variance is CPU-shaped.** Only the draft_model cells moved (+12-17%) between runs.
-   GPU-bound configs reproduced within about 2%.
+   at 100% and the CPU at 50-90%.
+4. **Per-draft-token cost is far above what the FLOPs predict.** Step time is derived as
+   TPOT x tokens/step (`results/step_cost.md`; for EAGLE-3 the traced step agrees within 2%). Each extra
+   draft token adds 3.7-6.3 ms per step at concurrency 1: comparable to an entire target decode step
+   (4.4 ms), for a model with 0.6B parameters against 3.3B active in the target. EAGLE-3 adds 0.7-1.2 ms
+   per draft token.
+5. **Run-to-run variance is CPU-shaped.** The draft_model cells moved the most between runs (up to +17%,
+   all in the same direction), while GPU-bound configs mostly reproduced within 2-3%.
+
+One loose end: even the target forward itself is slower in the draft_model trace (8.36 ms for the same
+5-token step that takes 6.60 ms under EAGLE-3). We have not isolated why; profiler overhead on the busier
+CPU thread and different graph/padding choices for the target are candidates.
 
 The pattern is a step that costs more than the work it contains. **The GPU waits on Python and
 kernel-launch overhead in the drafter loop.** Full CUDA-graph capture of the drafter, or a fused
@@ -254,7 +274,8 @@ Even with a free draft, verifying K+1 tokens is not free for this model.
   50% more time for 5x the tokens.
 - **At 16 requests** most of the 128 experts are already touched by 16 tokens x 8 experts, so 5x more
   tokens costs only 39% more.
-- `fused_moe_kernel` is 59% of GPU time in the EAGLE-3 concurrency-1 trace and 80% at concurrency 16.
+- `fused_moe_kernel` alone is 51% of GPU kernel time in the EAGLE-3 concurrency-1 trace and 76% at
+  concurrency 16 (59% / 80% for all MoE kernels).
 - vLLM also logged that no tuned fused-MoE config exists for this shape on H100
   ("Using default MoE config. Performance might be sub-optimal", `E=128,N=768`). That makes MoE kernels
   a larger share of the step than they need to be, both for the baseline and for verification. Tuning
@@ -263,11 +284,13 @@ Even with a free draft, verifying K+1 tokens is not free for this model.
 
 ### Smaller overheads
 
-- **Eager work** (sampling, rejection sampling, input preparation) is 5-8% of GPU kernel time in every
-  graph-based config.
+- **Eager work** (sampling, rejection sampling, input preparation, and EAGLE-3 draft passes too small to
+  pass the 20-kernel graph threshold) is 5-8% of GPU kernel time in every graph-based config. This is
+  also why the EAGLE-3 trace shows about 2 drafter graph replays per step rather than K=4: the later
+  single-token draft passes are small and are counted as eager.
 - **n-gram's step** costs more than its verification work. vLLM disables async scheduling for the
   CPU n-gram proposer (`config/vllm.py`), and variable-length drafts lose uniform-decode FULL graphs.
-  Its TPOT is 0.78-0.89x baseline at concurrency 1, even though "drafting is free".
+  Its TPOT is 0.78-0.84x baseline at concurrency 1, even though "drafting is free".
 
 ## Part 5: Explaining the results
 
@@ -286,25 +309,35 @@ Even with a free draft, verifying K+1 tokens is not free for this model.
   512 tokens for K=1.
 - **The 0.6B draft helps only under load.** It gives 1.28-1.68x TPOT at concurrency 16 for K=1-4, and
   1.15-1.39x throughput at concurrency 4 for K=1.
-- **Mechanism.** Speedup = tokens per step / (step cost / baseline step cost). EAGLE-3 K=1 at
+- **Mechanism.** Speedup = tokens per step / (step cost / baseline step cost). This is an accounting
+  identity (step cost is derived from TPOT); its value is that it splits a speedup into an acceptance
+  part and a cost part, and the profiler independently confirms the cost part for EAGLE-3. EAGLE-3 K=1 at
   128 tokens yields 1.59 tokens/step at 1.25x the cost of a baseline step, so 1.27x.
 
 ### Q2. When does it hurt?
 
+Clear losses (well outside the noise band):
+
 | Config | Regime | TPOT vs baseline | Why |
 |---|---|---|---|
 | draft_model K=2/4/8 | conc 1, all lengths | 0.29-0.87x | Draft cost 3.7-6.3 ms per draft token (launch-bound) exceeds the value of the extra accepted tokens. At K=8 a step costs 11.9x a baseline step but yields 3.5-6.5 tokens |
-| draft_model K=1 | conc 1, 128/512 tokens | 0.93-0.94x | 1.73-1.76 tokens/step at 1.86x step cost |
-| draft_model K=8 | conc 16, 128/512 tokens | 0.82-0.83x | 8 sequential launch-bound draft passes even with batch amortization |
-| ngram K=4 | conc 1, all; conc 4/16, 128/512 tokens | 0.78-0.97x | Our prompts are open-ended generation, so the prompt rarely contains the continuation (true acceptance is far below the 0.21-0.58 counter value). Async scheduling and FULL decode graphs are lost |
-| eagle3 K=8 | conc 1, 128/512 tokens | 0.99-1.00x | 85% of drafts at positions 2-8 are rejected (acceptance 0.14-0.15), and verifying 9 tokens is not free on an MoE target |
+| draft_model K=4 | conc 4, 128/512 tokens | 0.86-0.90x | Batch of 4 amortizes too little of the per-pass overhead |
+| draft_model K=8 | conc 4, all lengths | 0.53-0.86x | Same, with twice the draft passes |
+| draft_model K=8 | conc 16, 128/512 tokens | 0.82-0.83x | 8 sequential launch-bound draft passes even with batch amortization; throughput is also below baseline at 32 tokens (0.90x) |
+| ngram K=4 | every cell | 0.78-0.97x TPOT (throughput 0.80-1.12x) | Our prompts are open-ended generation, so the prompt rarely contains the continuation (true acceptance is below the 0.21-0.58 counter value). Async scheduling and uniform-decode FULL graphs are lost |
+
+Break-even (inside the noise band, so neither a win nor a loss):
+- draft_model K=1 at concurrency 1: 0.93-1.06x TPOT (1.73-1.93 tokens/step at about 1.85x step cost).
+- eagle3 K=8 at concurrency 1, 128/512 tokens: 0.99-1.00x. Only 14-15% of draft tokens are accepted, and
+  verifying 9 positions per request is not free on an MoE target.
 
 In every losing case the extra per-step cost (draft passes, verification of rejected tokens, lost
 graphs) exceeds what acceptance returns.
 
 ### Q3. How important is acceptance rate?
 
-Necessary but not sufficient. The chain, with our numbers (128 tokens, concurrency 1, greedy):
+Necessary but not sufficient: acceptance sets how many tokens a step yields, the draft sets what a step
+costs, and only the ratio matters. The chain, with our numbers (128 tokens, concurrency 1, greedy):
 
 ```
 draft quality -> acceptance -> tokens per target step -> latency/throughput
@@ -323,7 +356,8 @@ EAGLE K=4:     0.28      ->  2.13 tokens/step   x  step cost 1.74x  ->  TPOT 1.2
   conditioned on the target's own hidden states.
 - **Break-even.** A configuration wins only when tokens/step > step cost / baseline step cost. For
   EAGLE-3 the cost multiplier is 1.25-2.2x, so 1.6-2.2 tokens/step are enough. For the 0.6B draft at
-  concurrency 1 the multiplier is 1.9-12x and 1.7-3.8 tokens/step never catch up.
+  concurrency 1 the multiplier is 1.8-12x; only K=1 on 32-token outputs scrapes past it (1.93 tokens/step
+  at 1.82x cost, 1.06x), every other cell falls short.
 - **Temperature.** At temperature 0.7 (with Qwen's default top-k 20 / top-p 0.95), outputs differ from
   greedy in 23/24 prompts, yet acceptance is unchanged (0.283 vs 0.282 for EAGLE-3 K=4; 0.527 vs 0.525
   for draft K=4), and so is TPOT. With greedy drafts, a token is accepted with probability
@@ -342,8 +376,8 @@ It does not keep improving.
   - EAGLE-3: K=1 for single requests on 128/512-token outputs, K=2 at concurrency 4, K=2-4 at
     concurrency 16, and K=4 for 32-token outputs at every concurrency.
   - 0.6B draft: K=1 at low concurrency, K=2 at concurrency 16.
-- **K=8 is worse than K=4 in every EAGLE-3 cell, and worse than baseline for the 0.6B draft at every
-  concurrency on 128/512 tokens.**
+- **K=8 is worse than K=4 in every EAGLE-3 cell** (at concurrency 4/16 it still beats the baseline:
+  1.12-1.60x TPOT, 1.08-1.58x throughput), **and worse than baseline for the 0.6B draft at every concurrency on 128/512 tokens.**
 - **The best K depends on the regime**, which is why vLLM offers per-batch-size K
   (`num_speculative_tokens_per_batch_size`, `v1/spec_decode/dynamic/`). We did not enable it.
 
@@ -379,7 +413,7 @@ It does not keep improving.
   variable-length drafts break it.
 - **Async scheduling** (on for EAGLE-3 and draft_model, off for n-gram) overlaps the next step's
   scheduling with the current GPU work.
-- **A separate draft model shares the KV pool**, cutting capacity to 41% of baseline. At our peak load
+- **A separate draft model shares the KV pool**, cutting capacity to 39-41% of baseline. At our peak load
   (16 requests x 512 tokens, 13.5% usage) this never bound. In production, a separate draft model would
   make vLLM queue or preempt requests at about 2.4x lower concurrency than the baseline or EAGLE-3.
 
@@ -391,31 +425,33 @@ better guesser loses at concurrency 1, why it recovers at concurrency 16, and wh
 **What the code does**
 - **Drafting is a Python loop of K forward passes** (`llm_base_proposer.py:689`). Draft cost is linear in
   K whether or not tokens are accepted.
-- **The drafter is limited to piecewise CUDA graphs** (`llm_base_proposer.py:424`: "Only supports
+- **The drafter gets at most piecewise CUDA graphs** (`llm_base_proposer.py:424`: "Only supports
   PIECEWISE cudagraphs (via mixed_mode)").
-  - Piecewise mode splits the compiled graph at every op in `splitting_ops`, which includes
-    `vllm::unified_attention_with_output` (see the `compilation_config` in any server log).
-  - For a 28-layer drafter that means roughly 28 graph segments plus 28 attention launches per draft
-    pass, each issued by the CPU, so about 60 or more launches x K passes per step.
+  - Even piecewise mode, which splits the compiled graph at every op in `splitting_ops` (including
+    `vllm::unified_attention_with_output`), would leave roughly 28 graph segments plus 28 attention
+    launches per pass of a 28-layer drafter.
+  - Our trace shows worse than that: no drafter graph replays at all and about 365 kernel launches per
+    draft pass, i.e. the 0.6B drafter's decode passes run effectively eager in this version.
   - The target, by contrast, replays one FULL graph per step
     (`gpu_model_runner.py:883`, uniform decode of 1+K tokens).
-- **EAGLE-3 has one layer**, so piecewise or not, a draft pass is a handful of launches. Its server log
-  also shows FULL decode-graph capture for the drafter.
+- **EAGLE-3 has one layer**, so a draft pass is a handful of launches either way, and its server log shows
+  dedicated FULL decode-graph capture for the drafter.
 - **The draft model's KV lives in the target's pool** (same `KVCacheConfig` group and block table;
-  `uses_draft_kv_cache`). That is where the 0.41x KV capacity comes from.
+  `uses_draft_kv_cache`). That is where the 0.39-0.41x KV capacity comes from.
 
 **How it shows up in the benchmark**
 - **Trace:** 58,430 eager kernel launches in 40 steps (about 1,460 per step), zero drafter graph
-  replays, GPU busy 25%.
-- **CPU sample:** EngineCore pinned at about 100% of a core while the GPU idles at about 50%.
+  replays.
+- **NVML and CPU sample (unprofiled):** GPU utilization 53% at K=4 and 44-55% at K=8, with EngineCore
+  pinned at about 100% of a core.
 - **Step cost:** 3.7-6.3 ms per draft token, roughly constant per pass. That is why cost grows linearly
   with K (`step_cost.md`) and why batching amortizes it (Q5).
 - **Variance:** the configs that depend on CPU launch rate are the ones that moved between runs.
 
 **Implication.** On this target, the choice between a small sibling model and an EAGLE-style head is less
 about guess quality and more about whether the drafter can run as one fused, graph-captured launch. A
-0.6B drafter with full CUDA-graph capture would cut most of the 3.7-6.3 ms per pass. Even then its
-28-layer depth would keep it well above EAGLE-3's cost.
+0.6B drafter with full CUDA-graph capture should remove most of the launch overhead in the 3.7-6.3 ms per
+pass (we did not test this). Even then its 28-layer depth would keep it well above EAGLE-3's cost.
 
 ## Limitations
 
@@ -427,8 +463,11 @@ about guess quality and more about whether the drafter can run as one fused, gra
   can be more repetitive than a real answer.
 - **The MoE kernels ran untuned** (vLLM's default config). Tuned kernels would make the target step
   cheaper, which shifts every break-even point.
-- **Repeats.** Each final cell was run once in the final run. A full first run (128/512-token cells)
-  plus replicates provide the noise estimate; percentiles are over 24-72 requests per cell.
+- **Repeats.** The reported numbers are from one run (the final one). The first full run's 128/512-token
+  cells, plus a replicate of baseline and EAGLE-3 K=4, give the noise estimate; percentiles are over 24-72
+  requests per cell.
+- **Committed logs.** `results/logs/server_baseline.log` and `server_eagle3_k4.log` were overwritten by the
+  later temperature and replicate runs (the benchmark logs `bench_<label>.log` are per label).
 - **Trace classification is heuristic.** Splitting kernels into target, draft and eager uses
   launch-group size and MoE kernel names. It is unambiguous for these three configs (counts match engine
   steps exactly) but is not general.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Record the software/hardware environment into results/env.txt
-source /root/venv/bin/activate
+source "${VENV:-/root/venv}/bin/activate"
 cd "$(dirname "$0")/.."
 {
   echo "date: $(date -u)"
