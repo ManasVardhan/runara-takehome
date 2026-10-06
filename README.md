@@ -10,7 +10,7 @@ profiler, and explained against the engine source.
   [`results/all_cells.md`](results/all_cells.md) / `.csv`
 - **Plan and requirement traceability:** [`docs/PLAN.md`](docs/PLAN.md); engine source notes: [`docs/internals_notes.md`](docs/internals_notes.md)
 
-## Headline results (128-token outputs, greedy)
+## Results (128-token outputs, greedy)
 
 | Configuration | K | Conc | TTFT p50 (ms) | TPOT p50 (ms) | Server tok/s | Acceptance | Tokens/step |
 |---|---|---|---|---|---|---|---|
