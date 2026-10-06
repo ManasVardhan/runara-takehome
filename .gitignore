@@ -1,0 +1,4 @@
+*.pdf
+results/traces/
+__pycache__/
+.DS_Store

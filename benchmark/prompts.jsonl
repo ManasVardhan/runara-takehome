@@ -1,0 +1,24 @@
+{"prompt": "Write a Python function that merges overlapping intervals in a list and explain its time complexity."}
+{"prompt": "Implement an LRU cache in Python using OrderedDict, with get and put methods and docstrings."}
+{"prompt": "Write a SQL query that returns the top 3 highest-paid employees in each department, then explain how window functions make it work."}
+{"prompt": "Explain what this does and suggest improvements: def f(xs): return [x for i, x in enumerate(xs) if x not in xs[:i]]"}
+{"prompt": "Write a bash script that finds the 10 largest files under a directory and prints their sizes in human-readable form."}
+{"prompt": "Write a TypeScript function that debounces another function, with generic types, and show an example of using it."}
+{"prompt": "A train leaves at 3:15 pm traveling 80 km/h. Another leaves the same station at 4:00 pm at 100 km/h on the same track. When does the second train catch the first? Show your work."}
+{"prompt": "Prove that the square root of 2 is irrational."}
+{"prompt": "What is the derivative of x^x? Walk through the steps."}
+{"prompt": "If you roll two fair dice, what is the probability that the sum is at least 9? Explain."}
+{"prompt": "Explain how a transformer's self-attention works to a software engineer who knows linear algebra."}
+{"prompt": "What are the main differences between TCP and UDP, and when would you choose each?"}
+{"prompt": "Explain why the sky is blue, including the role of Rayleigh scattering."}
+{"prompt": "Describe how a hash map handles collisions, comparing chaining and open addressing."}
+{"prompt": "What causes inflation, and how do central banks try to control it?"}
+{"prompt": "Explain the CAP theorem with a concrete example of a distributed database."}
+{"prompt": "Write a short professional email asking a colleague to review a pull request by Friday."}
+{"prompt": "Write a haiku sequence of four stanzas about autumn in a city."}
+{"prompt": "Rewrite this sentence to be clearer and more concise: 'Due to the fact that the meeting was postponed, we were unable to finalize the decision that needed to be made regarding the budget.'"}
+{"prompt": "Write a product description for a reusable stainless steel water bottle aimed at hikers."}
+{"prompt": "Summarize the following in three bullet points: The Industrial Revolution began in Britain in the late 18th century, driven by innovations in textile manufacturing, the steam engine, and iron production. It led to rapid urbanization as workers moved from farms to factory towns, created new social classes, and dramatically increased economic output. It also brought harsh working conditions, child labor, and pollution, which eventually prompted labor reforms and public health legislation."}
+{"prompt": "Extract every person and organization mentioned, as a JSON list: 'Ada Lovelace worked with Charles Babbage on the Analytical Engine. Decades later, Alan Turing joined the University of Manchester, and IBM and Bell Labs built early commercial computers.'"}
+{"prompt": "Translate to French and then back to English, noting any meaning that changed: 'The early bird catches the worm, but the second mouse gets the cheese.'"}
+{"prompt": "List the steps to set up a Python virtual environment, install packages from requirements.txt, and run tests with pytest."}
