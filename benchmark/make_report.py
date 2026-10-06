@@ -114,7 +114,7 @@ def summary(L):
                    f"{fmt(r.acceptance_rate, 2)} | {fmt(r.mean_accepted_len, 2)} | "
                    f"{fmt(r.e2e_speedup, 2)} | {fmt(r.throughput_speedup, 2)} |")
 
-    c1 = g[g.concurrency == 1].sort_values(["method", "k"])
+    c1 = g[g.concurrency == 1].assign(_b=lambda x: x.method != "none").sort_values(["_b", "method", "k"])
     for _, r in c1.iterrows():
         line(r, "Baseline" if r.method == "none" else "Speculative")
     for conc in sorted(c for c in g.concurrency.unique() if c != 1):
@@ -129,6 +129,31 @@ def summary(L):
                 line(r, f"Speculative (best K at conc 1)")
     return "\n".join(out)
 
+
+# Step-cost model: a speculative step emits mean_accepted_len tokens, so the wall time of one
+# engine step is TPOT x tokens/step. Comparing that with the baseline step (TPOT, 1 token/step)
+# separates "how many tokens a step yields" (acceptance) from "what a step costs" (draft + verify).
+def step_cost(conc):
+    g = df[(df.temperature == 0) & (df.concurrency == conc) & ~df.label.str.contains("_rep")]
+    out = ["| Method | K | Output len | Acceptance | Tokens/step | Step time (ms) | Step cost vs baseline step | "
+           "Extra ms per draft token | TPOT speedup |", "|---|---|---|---|---|---|---|---|---|"]
+    for L in sorted(g.output_len.unique()):
+        b = g[(g.method == "none") & (g.output_len == L)]
+        if b.empty:
+            continue
+        bt = b.iloc[0].tpot_50_ms
+        for _, r in g[(g.method != "none") & (g.output_len == L)].sort_values(["method", "k"]).iterrows():
+            if pd.isna(r.mean_accepted_len):
+                continue
+            step = r.tpot_50_ms * r.mean_accepted_len
+            out.append(f"| {r.method} | {int(r.k)} | {int(L)} | {fmt(r.acceptance_rate, 2)} | {fmt(r.mean_accepted_len, 2)} | "
+                       f"{fmt(step, 2)} | {fmt(step / bt, 2)}x | {fmt((step - bt) / r.k, 2)} | {fmt(bt / r.tpot_50_ms, 2)} |")
+    return "\n".join(out)
+
+
+with open(os.path.join(args.out, "step_cost.md"), "w") as f:
+    for conc in (1, 16):
+        f.write(f"### Concurrency {conc}: step-cost decomposition (greedy)\n\n{step_cost(conc)}\n\n")
 
 with open(os.path.join(args.out, "summary.md"), "w") as f:
     for L in sorted(df.output_len.unique()):
