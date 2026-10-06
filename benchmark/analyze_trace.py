@@ -18,6 +18,8 @@ import glob
 import gzip
 import json
 import os
+import re
+import statistics
 from collections import defaultdict
 
 PHASE_PREFIX = "gpu_model_runner: "
@@ -99,13 +101,28 @@ def analyze(path):
     busy = union_len([(k["ts"], k["ts"] + k["dur"]) for k in kernels])
     kernel_total = sum(k["dur"] for k in kernels)
     steps = sum(1 for p in phases if p["name"] == PHASE_PREFIX + "forward")
+    # vLLM labels each step's GPU span "execute_context_<reqs>(<tokens>)_generation_<reqs>(<tokens>)".
+    # For decode-only steps, GPU time vs. generation tokens shows how verification cost scales
+    # with tokens per step (batch x (K+1)); for an MoE target, more tokens touch more experts.
+    step_rx = re.compile(r"execute_context_(\d+)\((\d+)\)_generation_(\d+)\((\d+)\)")
+    by_gen_tokens = defaultdict(list)
+    for e in ev:
+        if e.get("cat") == "gpu_user_annotation":
+            m = step_rx.fullmatch(e["name"])
+            if m and int(m.group(1)) == 0:
+                by_gen_tokens[(int(m.group(3)), int(m.group(4)))].append(e["dur"] / 1e3)
+    if not steps:
+        steps = sum(len(v) for v in by_gen_tokens.values()) or None
     return {
+        "decode_step_gpu_ms_by_batch": {
+            f"reqs={r} tokens={t}": {"n": len(v), "median_ms": round(statistics.median(v), 3)}
+            for (r, t), v in sorted(by_gen_tokens.items()) if len(v) >= 3},
         "file": os.path.basename(path),
         "window_ms": window / 1e3,
         "gpu_busy_frac": busy / window if window else None,
         "kernel_ms_total": kernel_total / 1e3,
         "engine_steps": steps,
-        "mean_step_ms": window / steps / 1e3 if steps else None,
+        "mean_step_ms": window / steps / 1e3 if steps else None,  # wall per step incl. idle
         "kernel_ms_by_phase": {k: round(v / 1e3, 2) for k, v in sorted(phase_time.items(), key=lambda x: -x[1])},
         "kernel_frac_by_phase": {k: round(v / kernel_total, 3) for k, v in sorted(phase_time.items(), key=lambda x: -x[1])},
         "kernel_frac_by_family": {k: round(v / kernel_total, 3) for k, v in sorted(fam_time.items(), key=lambda x: -x[1])},
@@ -129,20 +146,16 @@ if __name__ == "__main__":
     args = ap.parse_args()
     out = {}
     for d in args.dirs:
-        files = sorted(glob.glob(os.path.join(d, "*.json*")))
-        # The engine-core (GPU worker) trace is the one with kernels; skip frontend-only traces.
-        for f in files:
-            r = analyze(f)
-            if "error" not in r:
-                out[os.path.basename(d.rstrip("/"))] = r
-                break
-        else:
-            out[os.path.basename(d.rstrip("/"))] = {"error": f"no kernel trace in {files}"}
+        # The GPU worker writes "dp0_pp0_tp0_..._rank0.*.pt.trace.json.gz"; the frontend
+        # ("*.async_llm.*") trace has no kernels. Take the largest trace file.
+        files = sorted(glob.glob(os.path.join(d, "*.pt.trace.json*")), key=os.path.getsize, reverse=True)
+        out[os.path.basename(d.rstrip("/"))] = analyze(files[0]) if files else {"error": f"no trace in {d}"}
     with open(args.out, "w") as fh:
         json.dump(out, fh, indent=2)
     for name, r in out.items():
         if "error" in r:
             print(name, r["error"])
             continue
-        print(f"{name}: steps={r['engine_steps']} step={r['mean_step_ms']:.2f}ms busy={r['gpu_busy_frac']:.2f} "
+        print(f"{name}: steps={r['engine_steps']} busy={r['gpu_busy_frac']:.2f} "
               f"phase={r['kernel_frac_by_phase']} family={r['kernel_frac_by_family']}")
+        print(f"    decode steps: {r['decode_step_gpu_ms_by_batch']}")

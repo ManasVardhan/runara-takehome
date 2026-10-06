@@ -3,6 +3,9 @@
 # Everything except the speculative config is identical across runs.
 set -euo pipefail
 export HF_HOME="${HF_HOME:-/workspace/hf}"
+# Emit record_function ranges ("gpu_model_runner: forward/draft/sample/...") so
+# torch-profiler traces can split step time by phase. No-op unless profiling.
+export VLLM_CUSTOM_SCOPES_FOR_PROFILING=1
 VENV="${VENV:-/root/venv}"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
