@@ -95,6 +95,26 @@ def analyze(path):
         fam_time[fam] += k["dur"]
         fam_by_phase[ph][fam] += k["dur"]
 
+    # Model-level split without relying on record_function scopes: kernels that share a
+    # CUPTI correlation id came from one launch call; a CUDA-graph replay of a whole model
+    # forward is one launch with many kernels. Only the target is MoE, so a big launch with
+    # fused_moe kernels is a target forward; a big launch without them is a draft forward
+    # (Qwen3-0.6B or the EAGLE-3 head); everything else is eager work (sampling, rejection
+    # sampling, input prep, KV bookkeeping, eager draft passes).
+    groups = defaultdict(list)
+    for k in kernels:
+        groups[(k.get("args") or {}).get("correlation")].append(k)
+    model_time = defaultdict(float)
+    model_launches = defaultdict(int)
+    for c, ks in groups.items():
+        dur = sum(k["dur"] for k in ks)
+        if c is not None and len(ks) >= 20:
+            kind = "target_forward" if any(family(k["name"]) == "moe" for k in ks) else "draft_forward"
+        else:
+            kind = "eager_other"
+        model_time[kind] += dur
+        model_launches[kind] += 1
+
     t0 = min(k["ts"] for k in kernels)
     t1 = max(k["ts"] + k["dur"] for k in kernels)
     window = t1 - t0
@@ -114,6 +134,9 @@ def analyze(path):
     if not steps:
         steps = sum(len(v) for v in by_gen_tokens.values()) or None
     return {
+        "kernel_ms_by_model": {k: round(v / 1e3, 2) for k, v in model_time.items()},
+        "kernel_frac_by_model": {k: round(v / sum(model_time.values()), 3) for k, v in model_time.items()},
+        "launches_by_model": dict(model_launches),
         "decode_step_gpu_ms_by_batch": {
             f"reqs={r} tokens={t}": {"n": len(v), "median_ms": round(statistics.median(v), 3)}
             for (r, t), v in sorted(by_gen_tokens.items()) if len(v) >= 3},
@@ -157,5 +180,5 @@ if __name__ == "__main__":
             print(name, r["error"])
             continue
         print(f"{name}: steps={r['engine_steps']} busy={r['gpu_busy_frac']:.2f} "
-              f"phase={r['kernel_frac_by_phase']} family={r['kernel_frac_by_family']}")
+              f"model={r['kernel_frac_by_model']} launches={r['launches_by_model']} family={r['kernel_frac_by_family']}")
         print(f"    decode steps: {r['decode_step_gpu_ms_by_batch']}")
